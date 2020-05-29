@@ -54,6 +54,7 @@ async function convertBody(
     result = encoder.encode(JSON.stringify(body));
     type = type ?? "json";
   } else if (typeof body === "function") {
+    console.log("func promiselike");
     const result = body.call(null);
     return convertBody(isPromiseLike(result) ? await result : result, type);
   } else if (body) {
@@ -74,7 +75,7 @@ export class Response {
   #getBody = async (): Promise<Uint8Array | Deno.Reader | undefined> => {
     const [body, type] = await convertBody(this.body, this.type);
     this.type = type;
-    console.log("get Body:::", "body-", body, "type", type);
+    console.log("#getBody:::", "body-", body, "type", type);
     return body;
   };
 
@@ -126,6 +127,7 @@ export class Response {
    * not been set yet, the status will be `404 Not Found`. */
   get status(): Status {
     if (this.#status) {
+      console.log("get status: ", this.#status);
       return this.#status;
     }
     const typeofbody = typeof this.body;

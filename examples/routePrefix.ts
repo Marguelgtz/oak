@@ -17,32 +17,32 @@ server.use(
 );
 
 const somePromise = async () => {
-  return Promise.resolve("promise works!");
+  return Promise.resolve({ status: 300, body: "promise works!" });
 };
 
 router
-  .get("/", ({ response }: { response: any }) => {
+  .get("/", async ({ response }: { response: any }) => {
     response.status = 200;
-    response.body = { msg: "blabla" };
-    // somePromise().then((res) => {
-    //   response.status = 200;
-    //   response.body = { msg: res };
-    // });
+    response.body = await somePromise().then((res) => res);
   })
   .get(
     "/:id",
-    ({ params, response }: { params: { id: string }; response: any }) => {
+    async ({ params, response }: { params: { id: string }; response: any }) => {
       console.log("------with params-----");
-      somePromise().then((res) => {
-        response.status = 300;
-        response.body = { msg: res };
+      await somePromise().then((res) => {
+        response.status = res.status;
+        response.body = res.body;
       });
     },
   )
   .get(
     "/test",
     ({ params, response }: { params: { id: string }; response: any }) => {
-      response.body = `test`;
+      somePromise()
+        .then((res) => {
+          response.status = 200; // This works
+          response.body = "body test"; // Doesn't work
+        });
     },
   );
 
