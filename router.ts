@@ -303,22 +303,11 @@ class Layer<
 
   setPrefix(prefix: string): this {
     if (this.path) {
-<<<<<<< HEAD
-      if (this.path === "/" && !this.options.strict) {
-        // check if path is set to "base" and the strict option is set to false
-        this.path = `${prefix}`;
-      } else {
-        this.path = `${prefix}${this.path}`;
-      }
-      this.paramNames = [];
-      this.regexp = pathToRegexp(this.path, this.paramNames, this.options);
-=======
       this.path = this.path !== "/" || this.#opts.strict === true
         ? `${prefix}${this.path}`
         : prefix;
       this.#paramNames = [];
       this.#regexp = pathToRegexp(this.path, this.#paramNames, this.#opts);
->>>>>>> 596255bd76835a1a5242b3993b86b3491e02860c
     }
     return this;
   }

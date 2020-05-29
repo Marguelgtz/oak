@@ -42,6 +42,7 @@ async function convertBody(
   body: Body | BodyFunction,
   type?: string,
 ): Promise<[Uint8Array | Deno.Reader | undefined, string | undefined]> {
+  console.log("convert body", body);
   let result: Uint8Array | Deno.Reader | undefined;
   if (BODY_TYPES.includes(typeof body)) {
     const bodyText = String(body);
@@ -73,6 +74,7 @@ export class Response {
   #getBody = async (): Promise<Uint8Array | Deno.Reader | undefined> => {
     const [body, type] = await convertBody(this.body, this.type);
     this.type = type;
+    console.log("get Body:::", "body-", body, "type", type);
     return body;
   };
 
@@ -89,6 +91,7 @@ export class Response {
    * the response is being sent and converted to a `Uint8Array` or a
    * `Deno.Reader`. */
   get body(): Body | BodyFunction {
+    console.log("get body:", this.#body);
     return this.#body;
   }
 
@@ -96,6 +99,7 @@ export class Response {
    * the response is being sent and converted to a `Uint8Array` or a
    * `Deno.Reader`. */
   set body(value: Body | BodyFunction) {
+    console.log("set body:", value);
     if (!this.#writable) {
       throw new Error("The response is not writable.");
     }
@@ -234,6 +238,8 @@ export class Response {
     }
 
     this.#writable = false;
+    console.log("last func, writable: ", this.#writable);
+    console.log("last func, body: ", body);
     return this.#serverResponse = {
       status: this.#status ?? (body ? Status.OK : Status.NotFound),
       body,

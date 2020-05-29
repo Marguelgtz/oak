@@ -17,20 +17,24 @@ server.use(
 );
 
 const somePromise = async () => {
-  return Promise.resolve("it works!");
+  return Promise.resolve("promise works!");
 };
 
 router
   .get("/", ({ response }: { response: any }) => {
     somePromise().then((res) => {
       response.status = 200;
-      response.body = { msg: "Prefix works" };
+      response.body = { msg: res };
     });
   })
   .get(
     "/:id",
     ({ params, response }: { params: { id: string }; response: any }) => {
-      response.body = `prefix w/ id: ${params.id}`;
+      console.log("------with params-----");
+      somePromise().then((res) => {
+        response.status = 300;
+        response.body = { msg: res };
+      });
     },
   )
   .get(
