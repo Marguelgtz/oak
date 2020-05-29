@@ -22,10 +22,12 @@ const somePromise = async () => {
 
 router
   .get("/", ({ response }: { response: any }) => {
-    somePromise().then((res) => {
-      response.status = 200;
-      response.body = { msg: res };
-    });
+    response.status = 200;
+    response.body = { msg: "blabla" };
+    // somePromise().then((res) => {
+    //   response.status = 200;
+    //   response.body = { msg: res };
+    // });
   })
   .get(
     "/:id",
