@@ -8,7 +8,7 @@ import {
   cyan,
   bold,
   yellow,
-} from "https://deno.land/std@0.52.0/fmt/colors.ts";
+} from "https://deno.land/std@0.53.0/fmt/colors.ts";
 
 import { Application, Context, Router, Status } from "../mod.ts";
 
@@ -62,11 +62,13 @@ app.use(router.allowedMethods());
 // A basic 404 page
 app.use(notFound);
 
+app.addEventListener("listen", ({ hostname, port }) => {
+  console.log(
+    bold("Start listening on ") + yellow(`${hostname}:${port}`),
+  );
+});
+
 // Utilise the signal from the controller
 const { signal } = controller;
-const options = { hostname: "127.0.0.1", port: 8000, signal };
-console.log(
-  bold("Start listening on ") + yellow(`${options.hostname}:${options.port}`),
-);
-await app.listen(options);
+await app.listen({ hostname: "127.0.0.1", port: 8000, signal });
 console.log(bold("Finished."));

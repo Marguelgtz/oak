@@ -41,14 +41,31 @@ interface ApplicationErrorEventListenerObject<S> {
   handleEvent(evt: ApplicationErrorEvent<S>): void | Promise<void>;
 }
 
-export interface ApplicationErrorEventInit<S extends State>
-  extends ErrorEventInit {
+interface ApplicationErrorEventInit<S extends State> extends ErrorEventInit {
   context?: Context<S>;
 }
 
 type ApplicationErrorEventListenerOrEventListenerObject<S> =
   | ApplicationErrorEventListener<S>
   | ApplicationErrorEventListenerObject<S>;
+
+interface ApplicationListenEventListener {
+  (evt: ApplicationListenEvent): void | Promise<void>;
+}
+
+interface ApplicationListenEventListenerObject {
+  handleEvent(evt: ApplicationListenEvent): void | Promise<void>;
+}
+
+interface ApplicationListenEventInit extends EventInit {
+  hostname?: string;
+  port: number;
+  secure: boolean;
+}
+
+type ApplicationListenEventListenerOrEventListenerObject =
+  | ApplicationListenEventListener
+  | ApplicationListenEventListenerObject;
 
 export interface ApplicationOptions<S> {
   /** An initial set of keys (or instance of `KeyGrip`) to be used for signing
@@ -78,9 +95,22 @@ const ADDR_REGEXP = /^\[?([^\]]*)\]?:([0-9]{1,5})$/;
 export class ApplicationErrorEvent<S extends State> extends ErrorEvent {
   context?: Context<S>;
 
-  constructor(type: string, eventInitDict: ApplicationErrorEventInit<S>) {
-    super(type, eventInitDict);
+  constructor(eventInitDict: ApplicationErrorEventInit<S>) {
+    super("error", eventInitDict);
     this.context = eventInitDict.context;
+  }
+}
+
+export class ApplicationListenEvent extends Event {
+  hostname?: string;
+  port: number;
+  secure: boolean;
+
+  constructor(eventInitDict: ApplicationListenEventInit) {
+    super("listen", eventInitDict);
+    this.hostname = eventInitDict.hostname;
+    this.port = eventInitDict.port;
+    this.secure = eventInitDict.secure;
   }
 }
 
@@ -90,10 +120,10 @@ export class ApplicationErrorEvent<S extends State> extends ErrorEvent {
  * The `context.state` can be typed via passing a generic argument when
  * constructing an instance of `Application`.
  */
-export class Application<S extends State = Record<string, any>>
+export class Application<AS extends State = Record<string, any>>
   extends EventTarget {
   #keys?: KeyStack;
-  #middleware: Middleware<S, Context<S>>[] = [];
+  #middleware: Middleware<State, Context<State>>[] = [];
   #serve: typeof defaultServe;
   #serveTls: typeof defaultServeTls;
 
@@ -125,9 +155,9 @@ export class Application<S extends State = Record<string, any>>
    *       const app = new Application({ state: { foo: "bar" } });
    * 
    */
-  state: S;
+  state: AS;
 
-  constructor(options: ApplicationOptions<S> = {}) {
+  constructor(options: ApplicationOptions<AS> = {}) {
     super();
     const {
       state,
@@ -137,21 +167,19 @@ export class Application<S extends State = Record<string, any>>
     } = options;
 
     this.keys = keys;
-    this.state = state ?? {} as S;
+    this.state = state ?? {} as AS;
     this.#serve = serve;
     this.#serveTls = serveTls;
   }
 
   /** Deal with uncaught errors in either the middleware or sending the
    * response. */
-  #handleError = (context: Context<S>, error: any): void => {
+  #handleError = (context: Context<AS>, error: any): void => {
     if (!(error instanceof Error)) {
       error = new Error(`non-error thrown: ${JSON.stringify(error)}`);
     }
     const { message } = error;
-    this.dispatchEvent(
-      new ApplicationErrorEvent("error", { context, message, error }),
-    );
+    this.dispatchEvent(new ApplicationErrorEvent({ context, message, error }));
     if (!context.response.writable) {
       return;
     }
@@ -180,7 +208,7 @@ export class Application<S extends State = Record<string, any>>
     handling: boolean;
     closing: boolean;
     closed: boolean;
-    middleware: (context: Context<S>) => Promise<void>;
+    middleware: (context: Context<AS>) => Promise<void>;
     server: Server;
   }) => {
     const context = new Context(this, request);
@@ -195,7 +223,7 @@ export class Application<S extends State = Record<string, any>>
       }
     }
     try {
-      await request.respond(context.response.toServerResponse());
+      await request.respond(await context.response.toServerResponse());
       if (state.closing) {
         state.server.close();
         state.closed = true;
@@ -207,7 +235,12 @@ export class Application<S extends State = Record<string, any>>
 
   addEventListener(
     type: "error",
-    listener: ApplicationErrorEventListenerOrEventListenerObject<S> | null,
+    listener: ApplicationErrorEventListenerOrEventListenerObject<AS> | null,
+    options?: boolean | AddEventListenerOptions,
+  ): void;
+  addEventListener(
+    type: "listen",
+    listener: ApplicationListenEventListenerOrEventListenerObject | null,
     options?: boolean | AddEventListenerOptions,
   ): void;
   addEventListener(
@@ -265,6 +298,10 @@ export class Application<S extends State = Record<string, any>>
         state.closing = true;
       });
     }
+    const { hostname, port, secure = false } = options;
+    this.dispatchEvent(
+      new ApplicationListenEvent({ hostname, port, secure }),
+    );
     try {
       for await (const request of server) {
         this.#handleRequest(request, state);
@@ -274,14 +311,16 @@ export class Application<S extends State = Record<string, any>>
         ? error.message
         : "Application Error";
       this.dispatchEvent(
-        new ApplicationErrorEvent("error", { message, error }),
+        new ApplicationErrorEvent({ message, error }),
       );
     }
   }
 
   /** Register middleware to be used with the application. */
-  use(...middleware: Middleware<S, Context<S>>[]): this {
+  use<S extends State = AS>(
+    ...middleware: Middleware<S, Context<S>>[]
+  ): Application<S extends AS ? S : (S & AS)> {
     this.#middleware.push(...middleware);
-    return this;
+    return this as Application<any>;
   }
 }

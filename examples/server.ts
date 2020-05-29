@@ -9,7 +9,7 @@ import {
   cyan,
   bold,
   yellow,
-} from "https://deno.land/std@0.52.0/fmt/colors.ts";
+} from "https://deno.land/std@0.53.0/fmt/colors.ts";
 
 import { Application } from "../mod.ts";
 
@@ -39,9 +39,11 @@ app.use((ctx) => {
   ctx.response.body = "Hello World!";
 });
 
-const options = { hostname: "127.0.0.1", port: 8000 };
-console.log(
-  bold("Start listening on ") + yellow(`${options.hostname}:${options.port}`),
-);
-await app.listen(options);
+app.addEventListener("listen", ({ hostname, port }) => {
+  console.log(
+    bold("Start listening on ") + yellow(`${hostname}:${port}`),
+  );
+});
+
+await app.listen({ hostname: "127.0.0.1", port: 8000 });
 console.log(bold("Finished."));

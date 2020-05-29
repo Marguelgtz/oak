@@ -6,7 +6,7 @@ including a router middleware.
 
 This middleware framework is inspired by [Koa](https://github.com/koajs/koa)
 and middleware router inspired by
-[koa-router](https://github.com/alexmingoia/koa-router/).
+[@koa/router](https://github.com/koajs/router/).
 
 - [deno doc for oak](https://doc.deno.land/https/deno.land/x/oak/mod.ts)
 - [Frequently Asked Questions](./FAQ)
@@ -23,7 +23,7 @@ versions of Deno in mind. In the examples here, we will be referring to using
 oak off of `master`, though in practice you should _pin_ to a specific version
 of oak in order to ensure compatibility.
 
-For example if you wanted to use version 3.1.0 of oak, you would want to import
+For example if you wanted to use version 4.0.0 of oak, you would want to import
 oak from `https://deno.land/x/oak@4.0.0/mod.ts`.
 
 All of the parts of oak that are intended to be used in creating a server are
@@ -85,7 +85,7 @@ insufficient in a lot of cases to create useful middleware. This is where the
 control the flow of other middleware, without the other middleware having to be
 aware of it. `next()` indicates to the application that it should continue
 executing other middleware in the chain. `next()` always returns a promise
-which is resolved then the other middleware in the chain has resolved.
+which is resolved when the other middleware in the chain has resolved.
 
 If you use `next()`, almost all the time you will want to `await next();` so
 that the code in your middleware function executes as you expect. If you don't

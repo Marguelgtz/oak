@@ -9,7 +9,7 @@ including a router middleware.
 
 This middleware framework is inspired by [Koa](https://github.com/koajs/koa)
 and middleware router inspired by
-[koa-router](https://github.com/alexmingoia/koa-router/).
+[@koa/router](https://github.com/koajs/router/).
 
 This README focuses on the mechanics of the oak APIs and is intended for those
 who are familiar with JavaScript middleware frameworks like Express and Koa as
@@ -268,7 +268,7 @@ And several methods:
   parsed as text, you would do something like this:
 
   ```ts
-  app.use((ctx) => {
+  app.use(async (ctx) => {
     const result = await ctx.request.body({
       contentTypes: {
         text: ["application/javascript"],
@@ -285,7 +285,7 @@ And several methods:
   would do something like this:
 
   ```ts
-  app.use((ctx) => {
+  app.use(async (ctx) => {
     const result = await ctx.request.body({
       contentTypes: {
         raw: ["text"],
@@ -349,8 +349,44 @@ If `.type` is not set with a value, then oak will inspect the value of
 `.response.body`. If the value is a `string`, then oak will check to see if
 the string looks like HTML, if so, `Content-Type` will be set to `text/html`
 otherwise it will be set to `text/plain`. If the value is an object, other
-than a `Uint8Array` or `null`, the object will be passed to `JSON.stringify()`
-and the `Content-Type` will be set to `application/json`.
+than a `Uint8Array`, a `Deno.Reader`, or `null`, the object will be passed to
+`JSON.stringify()` and the `Content-Type` will be set to `application/json`.
+
+If the type of body is a number, bigint or symbol, it will be coerced to a
+string and treated as text.
+
+If the value of body is a function, the function will be called with no
+arguments. If the return value of the function is promise like, that will be
+await, and the resolved value will be processed as above. If the value is not
+promise like, it will be processed as above.
+
+### Opening the server
+
+The application method `.listen()` is used to open the server, start listening
+for requests, and processing the registered middleware for each request. This
+method returns a promise when the server closes.
+
+Once the server is open, before it starts processing requests, the application
+will fire a `"listen"` event, which can be listened for via the
+`.addEventListener()` method. For example:
+
+```ts
+import { Application } from "https://deno.land/x/oak/mod.ts";
+
+const app = new Application();
+
+app.addEventListener("listen", ({ hostname, port, secure }) => {
+  console.log(
+    `Listening on: ${secure ? "https://" : "http://"}${
+      hostname ?? "localhost"
+    }:${port}`
+  );
+});
+
+// register some middleware
+
+await app.listen({ port: 80 });
+```
 
 ### Closing the server
 
@@ -456,7 +492,7 @@ const books = new Map<string, any>();
 books.set("1", {
   id: "1",
   title: "The Hound of the Baskervilles",
-  author: "Conan Doyle, Author",
+  author: "Conan Doyle, Arthur",
 });
 
 const router = new Router();
@@ -502,6 +538,59 @@ app.use(async (context) => {
 });
 
 await app.listen({ port: 8000 });
+```
+
+## Helpers
+
+The `mod.ts` also exports a variable named `helpers` which contains functions
+that help with managing contexts.
+
+### getQuery(ctx, options?)
+
+The `helpers.getQuery()` function is designed to make it easier to determine
+what a request might be querying in the middleware. It takes the supplied
+context's `.request.url.searchParams` and converts it to a record object of the
+keys and values. For example, it would convert the following request:
+
+```
+https://localhost/resource/?foo=bar&baz=qat
+```
+
+Into an object like this:
+
+```js
+{
+  foo: "bar",
+  baz: "qat"
+}
+```
+
+The function can take a couple of options. The `asMap` will result in a `Map`
+being returned instead of an object. The `mergeParams` will merge in parameters
+that were parsed out of the route. This only works with router contexts, and
+any params will be overwritten by the request's search params. If the following
+URL was requested:
+
+```
+https://localhost/book/1234/page/23?page=32&size=24
+```
+
+And the following was the router middleware:
+
+```ts
+router.get("/book/:id/page/:page", (ctx) => {
+  getQuery(ctx, { mergeParams: true });
+});
+```
+
+Would result in the return value being:
+
+```js
+{
+  id: "1234",
+  page: "32",
+  size: "24"
+}
 ```
 
 ---

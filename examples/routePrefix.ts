@@ -16,10 +16,16 @@ server.use(
   router.allowedMethods(),
 );
 
+const somePromise = async () => {
+  return Promise.resolve("it works!");
+};
+
 router
   .get("/", ({ response }: { response: any }) => {
-    response.status = 200;
-    response.body = { msg: "Prefix works" };
+    somePromise().then((res) => {
+      response.status = 200;
+      response.body = { msg: "Prefix works" };
+    });
   })
   .get(
     "/:id",

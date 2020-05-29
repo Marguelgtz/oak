@@ -365,3 +365,37 @@ test({
     }, TypeError);
   },
 });
+
+test({
+  name: "app.state type handling",
+  fn() {
+    const app = new Application({ state: { id: 1 } });
+    app.use((ctx: Context<{ session: number }>) => {
+      ctx.state.session = 0;
+    }).use((ctx) => {
+      ctx.state.id = 1;
+      ctx.state.session = 2;
+      // @ts-expect-error
+      ctx.state.bar = 3;
+    });
+  },
+});
+
+test({
+  name: "application listen event",
+  async fn() {
+    const app = new Application({ serve });
+    let called = 0;
+    app.addEventListener("listen", (evt) => {
+      called++;
+      assertEquals(evt.hostname, "localhost");
+      assertEquals(evt.port, 80);
+      assertEquals(evt.secure, false);
+    });
+    app.use((ctx) => {
+      ctx.response.body = "hello world";
+    });
+    await app.listen({ hostname: "localhost", port: 80 });
+    assertEquals(called, 1);
+  },
+});
